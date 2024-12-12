@@ -29,3 +29,8 @@ mkdir build
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 make -j
+
+# mkdir build
+# cd build
+# cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_CLOSED_LOOP=OFF
+# make -j

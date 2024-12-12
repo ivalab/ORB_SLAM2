@@ -78,7 +78,21 @@ void LocalMapping::Run()
             {
                 // Local BA
                 if(mpMap->KeyFramesInMap()>2)
-                    Optimizer::LocalBundleAdjustment(mpCurrentKeyFrame,&mbAbortBA, mpMap);
+                {
+                    logCurrentFrame_.setZero();
+                    logCurrentFrame_.timestamp = mpCurrentKeyFrame->mTimeStamp;
+                    timer_.tic();
+                    size_t num_fixed_kfs = 0;
+                    size_t num_kfs = 0;
+                    size_t num_pts = 0;
+                    Optimizer::LocalBundleAdjustment(mpCurrentKeyFrame,
+                                                     &mbAbortBA, mpMap, num_fixed_kfs, num_kfs, num_pts);
+                    logCurrentFrame_.local_ba = timer_.toc();
+                    logCurrentFrame_.num_fixed_kfs = num_fixed_kfs;
+                    logCurrentFrame_.num_opt_kfs   = num_kfs;
+                    logCurrentFrame_.num_points    = num_pts;
+                    mFrameTimeLog_.emplace_back(logCurrentFrame_);
+                }
 
                 // Check redundant local Keyframes
                 KeyFrameCulling();

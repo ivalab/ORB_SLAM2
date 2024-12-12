@@ -26,6 +26,7 @@
 #include "LoopClosing.h"
 #include "Tracking.h"
 #include "KeyFrameDatabase.h"
+#include "timer.h"
 
 #include <mutex>
 
@@ -121,6 +122,48 @@ protected:
 
     bool mbAcceptKeyFrames;
     std::mutex mMutexAccept;
+
+
+public:
+    struct TimeLog
+    {
+        double timestamp = 0.0;
+        double local_ba = 0.0;
+        int    num_fixed_kfs = 0;
+        int    num_opt_kfs   = 0;
+        int    num_points   = 0;
+
+        /**
+         * @brief Set the Zero object
+         * 
+         */
+        void setZero()
+        {
+            timestamp = 0.0;
+            local_ba = 0.0;
+        }
+
+        friend std::ostream& operator<<(std::ostream& os, const TimeLog& l)
+        {
+            os << std::setprecision(10);
+            os << l.timestamp << " "
+               << l.local_ba << " "
+               << l.num_fixed_kfs << " "
+               << l.num_opt_kfs << " "
+               << l.num_points;
+            //    << l.num_edges;
+            return os;
+        }
+
+        static std::string header()
+        {
+            return "# timestamp local_ba num_fixed_kfs num_opt_kfs num_points "
+                   "num_edges";
+        }
+    };
+    TimeLog logCurrentFrame_;
+    std::vector<TimeLog> mFrameTimeLog_;
+    slam_utility::stats::TicTocTimer timer_;
 };
 
 } //namespace ORB_SLAM

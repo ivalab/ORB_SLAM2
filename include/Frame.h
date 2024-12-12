@@ -29,6 +29,7 @@
 #include "ORBVocabulary.h"
 #include "KeyFrame.h"
 #include "ORBextractor.h"
+#include "timer.h"
 
 #include <opencv2/opencv.hpp>
 
@@ -163,6 +164,9 @@ public:
     // Camera pose.
     cv::Mat mTcw;
 
+    // predicted pose, for recording and comparison
+    cv::Mat predicted_mTcw;
+
     // Current and Next Frame id.
     static long unsigned int nNextId;
     long unsigned int mnId;
@@ -206,6 +210,14 @@ private:
     cv::Mat mtcw;
     cv::Mat mRwc;
     cv::Mat mOw; //==mtwc
+public:
+    struct TimeLog
+    {
+        double feature_extraction = 0.0;
+        double stereo_matching = 0.0;
+    };
+    TimeLog logCurrentFrame_;
+    slam_utility::stats::TicTocTimer timer_;
 };
 
 }// namespace ORB_SLAM

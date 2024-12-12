@@ -489,4 +489,30 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
     return mTrackedKeyPointsUn;
 }
 
+void System::SaveTrackingLog(const string &filename)
+{
+    cout << endl << "Saving tracking log to " << filename << " ..." << endl;
+    std::ofstream myfile(filename);
+    myfile << Tracking::TimeLog::header() << "\n";
+    myfile << std::fixed;
+    for (const auto& log : mpTracker->mFrameTimeLog_)
+    {
+        myfile << log << "\n";
+    }
+    myfile.close();
+}
+
+void System::SaveMappingLog(const string &filename)
+{
+    cout << endl << "Saving mapping log to " << filename << " ..." << endl;
+    std::ofstream myfile(filename);
+    myfile << LocalMapping::TimeLog::header() << "\n";
+    myfile << std::fixed;
+    for (const auto& log : mpLocalMapper->mFrameTimeLog_)
+    {
+        myfile << log << "\n";
+    }
+    myfile.close();
+}
+
 } //namespace ORB_SLAM

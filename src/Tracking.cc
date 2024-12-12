@@ -166,6 +166,9 @@ void Tracking::SetViewer(Viewer *pViewer)
 
 cv::Mat Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat &imRectRight, const double &timestamp)
 {
+    logCurrentFrame_.setZero();
+    logCurrentFrame_.timestamp = timestamp;
+    timer_.tic();
     mImGray = imRectLeft;
     cv::Mat imGrayRight = imRectRight;
 
@@ -197,7 +200,9 @@ cv::Mat Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat &imRe
     }
 
     mCurrentFrame = Frame(mImGray,imGrayRight,timestamp,mpORBextractorLeft,mpORBextractorRight,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth);
-
+    logCurrentFrame_.create_frame = timer_.toc();
+    logCurrentFrame_.stereo_matching = mCurrentFrame.logCurrentFrame_.stereo_matching;
+    logCurrentFrame_.feature_extraction = mCurrentFrame.logCurrentFrame_.feature_extraction;
     Track();
 
     return mCurrentFrame.mTcw.clone();
@@ -306,13 +311,21 @@ void Tracking::Track()
 
                 if(mVelocity.empty() || mCurrentFrame.mnId<mnLastRelocFrameId+2)
                 {
+                    timer_.tic();
                     bOK = TrackReferenceKeyFrame();
+                    logCurrentFrame_.track_keyframe = timer_.toc();
                 }
                 else
                 {
+                    timer_.tic();
                     bOK = TrackWithMotionModel();
+                    logCurrentFrame_.track_motion = timer_.toc();
                     if(!bOK)
+                    {
+                        timer_.tic();
                         bOK = TrackReferenceKeyFrame();
+                        logCurrentFrame_.track_keyframe = timer_.toc();
+                    }
                 }
             }
             else
@@ -398,7 +411,11 @@ void Tracking::Track()
         if(!mbOnlyTracking)
         {
             if(bOK)
+            {
+                timer_.tic();
                 bOK = TrackLocalMap();
+                logCurrentFrame_.track_map = timer_.toc();
+            }
         }
         else
         {
@@ -420,6 +437,7 @@ void Tracking::Track()
         // If tracking were good, check if we insert a keyframe
         if(bOK)
         {
+            timer_.tic();
             // Update motion model
             if(!mLastFrame.mTcw.empty())
             {
@@ -430,6 +448,8 @@ void Tracking::Track()
             }
             else
                 mVelocity = cv::Mat();
+            logCurrentFrame_.update_motion = timer_.toc();
+            timer_.tic();
 
             mpMapDrawer->SetCurrentCameraPose(mCurrentFrame.mTcw);
 
@@ -466,6 +486,7 @@ void Tracking::Track()
                 if(mCurrentFrame.mvpMapPoints[i] && mCurrentFrame.mvbOutlier[i])
                     mCurrentFrame.mvpMapPoints[i]=static_cast<MapPoint*>(NULL);
             }
+            logCurrentFrame_.post_processing = timer_.toc();
         }
 
         // Reset if the camera get lost soon after initialization
@@ -493,6 +514,18 @@ void Tracking::Track()
         mlpReferences.push_back(mpReferenceKF);
         mlFrameTimes.push_back(mCurrentFrame.mTimeStamp);
         mlbLost.push_back(mState==LOST);
+        mlFramePoses.push_back(mCurrentFrame.mTcw.clone());
+        {
+
+            cv::Mat Tcw = mCurrentFrame.mTcw;
+            cv::Mat R = Tcw.rowRange(0,3).colRange(0,3).t();
+            cv::Mat t = -R*Tcw.rowRange(0,3).col(3);
+            vector<float> q = ORB_SLAM2::Converter::toQuaternion(R);
+            f_realTimeTrack << setprecision(6) << mCurrentFrame.mTimeStamp << setprecision(7)
+                            << " " << t.at<float>(0) << " " << t.at<float>(1) << " " << t.at<float>(2)
+                            << " " << q[0] << " " << q[1] << " " << q[2] << " " << q[3] << endl;
+
+        }
     }
     else
     {
@@ -502,9 +535,9 @@ void Tracking::Track()
         mlFrameTimes.push_back(mlFrameTimes.back());
         mlbLost.push_back(mState==LOST);
     }
-
+    mlFramePredictedPoses.push_back(mCurrentFrame.predicted_mTcw.clone());
+    mFrameTimeLog_.push_back(logCurrentFrame_);
 }
-
 
 void Tracking::StereoInitialization()
 {
@@ -873,6 +906,7 @@ bool Tracking::TrackWithMotionModel()
     UpdateLastFrame();
 
     mCurrentFrame.SetPose(mVelocity*mLastFrame.mTcw);
+    mCurrentFrame.predicted_mTcw = mVelocity * mLastFrame.mTcw;
 
     fill(mCurrentFrame.mvpMapPoints.begin(),mCurrentFrame.mvpMapPoints.end(),static_cast<MapPoint*>(NULL));
 
@@ -1544,6 +1578,8 @@ void Tracking::Reset()
     mlpReferences.clear();
     mlFrameTimes.clear();
     mlbLost.clear();
+    mlFramePoses.clear();
+    mlFramePredictedPoses.clear();
 
     if(mpViewer)
         mpViewer->Release();
@@ -1587,6 +1623,35 @@ void Tracking::InformOnlyTracking(const bool &flag)
     mbOnlyTracking = flag;
 }
 
+void Tracking::updateORBExtractor(int feature_num) {
+
+    assert(mpORBextractorLeft != NULL);
+
+    // take the budget number of input arg as feature extraction constr
+    float fScaleFactor = mpORBextractorLeft->GetScaleFactor();
+    int nLevels = mpORBextractorLeft->GetLevels();
+    int fIniThFAST = mpORBextractorLeft->GetInitThres();
+    int fMinThFAST = mpORBextractorLeft->GetMinThres();
+
+    //
+    delete mpORBextractorLeft;
+    mpORBextractorLeft = new ORBextractor(feature_num,fScaleFactor,nLevels,fIniThFAST,fMinThFAST);
+
+    if(mSensor==System::STEREO) {
+        assert(mpORBextractorRight != NULL);
+        //
+        delete mpORBextractorRight;
+        mpORBextractorRight = new ORBextractor(feature_num,fScaleFactor,nLevels,fIniThFAST,fMinThFAST);
+    }
+    std::cout << "Feature Number adjusted to " << feature_num << std::endl;
+}
+
+void Tracking::SetRealTimeFileStream(string fNameRealTimeTrack)
+{
+    f_realTimeTrack.open(fNameRealTimeTrack.c_str());
+    f_realTimeTrack << fixed;
+    f_realTimeTrack << "#TimeStamp Tx Ty Tz Qx Qy Qz Qw" << std::endl;
+}
 
 
 } //namespace ORB_SLAM

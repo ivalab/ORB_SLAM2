@@ -23,7 +23,9 @@
 
 #include <vector>
 #include <list>
-#include <opencv/cv.h>
+// #include <opencv/cv.h>
+#include <opencv2/imgcodecs/legacy/constants_c.h>
+#include <unistd.h>
 
 
 namespace ORB_SLAM2
@@ -65,6 +67,9 @@ public:
 
     float inline GetScaleFactor(){
         return scaleFactor;}
+
+    float GetInitThres() {return iniThFAST;}
+    float GetMinThres() {return minThFAST;}
 
     std::vector<float> inline GetScaleFactors(){
         return mvScaleFactor;

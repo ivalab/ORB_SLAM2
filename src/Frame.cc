@@ -75,10 +75,12 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
     mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();
 
     // ORB extraction
+    timer_.tic();
     thread threadLeft(&Frame::ExtractORB,this,0,imLeft);
     thread threadRight(&Frame::ExtractORB,this,1,imRight);
     threadLeft.join();
     threadRight.join();
+    logCurrentFrame_.feature_extraction = timer_.toc();
 
     N = mvKeys.size();
 
@@ -86,8 +88,9 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
         return;
 
     UndistortKeyPoints();
-
+    timer_.tic();
     ComputeStereoMatches();
+    logCurrentFrame_.stereo_matching = timer_.toc();
 
     mvpMapPoints = vector<MapPoint*>(N,static_cast<MapPoint*>(NULL));    
     mvbOutlier = vector<bool>(N,false);
