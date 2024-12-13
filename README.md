@@ -3,6 +3,8 @@
 ## Build
 
 ```
+git clone https://github.com/ivalab/ORB_SLAM2.git
+
 # Export ORB_SLAM2 ROS package path. 
 # Please set your `ROS_WS` inside the file.
 source export_ros_path.bash
