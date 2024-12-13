@@ -263,7 +263,7 @@ public:
                << l.track_keyframe << " "
                << l.track_map << " "
                << l.update_motion << " "
-               << l.post_processing << "\n";
+               << l.post_processing;
             return os;
         }
 
