@@ -34,12 +34,12 @@ SeqNameList = [
 ]
 
 # Result_root = os.path.join(os.environ["HOME"], "slam_ws/results/experiments/openloop/laptop/orb2/")
-Result_root = "/tmp/orb2"
+Result_root = "/tmp/orb2/"
 
 # Number_GF_List = [400, 800, 1000, 1500]
-Number_GF_List = [1200]  # , 200]  # , 400]
+Number_GF_List = [800]  # , 200]  # , 400]
 NumRepeating = 10  # 10 # 20 #  5 #
-SpeedPool = [1.0, 2.0, 3.0, 4.0, 5.0]  # , 3.0]  # x
+SpeedPool = [1.0, 2.0, 3.0, 4.0, 5.0]
 SleepTime = 1  # 10 # 25
 EnableViewer = False
 EnableLogging = 1
@@ -107,7 +107,7 @@ for speed in SpeedPool:
                     + " "
                     + str(int(num_gf))
                     + " "
-                    + "false"
+                    + "true"
                     + " "
                     + str(1 if EnableViewer else 0)
                     + " "
@@ -132,7 +132,7 @@ for speed in SpeedPool:
                 proc_bag = subprocess.call(cmd_rosbag, shell=True)
 
                 print(bcolors.OKGREEN + "Finished rosbag playback, kill the process" + bcolors.ENDC)
-                subprocess.call("rosnode kill Stereo", shell=True)
+                subprocess.call("rosnode kill /Stereo", shell=True)
                 time.sleep(SleepTime)
                 # print bcolors.OKGREEN + "Saving the map to file system" + bcolors.ENDC
                 # time.sleep(15)

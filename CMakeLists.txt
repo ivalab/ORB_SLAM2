@@ -7,7 +7,7 @@ ENDIF()
 
 MESSAGE("Build type: " ${CMAKE_BUILD_TYPE})
 
-option(ENABLE_CLOSED_LOOP "Build Closed-Loop" ON)
+option(ENABLE_CLOSED_LOOP "Build Closed-Loop" OFF)
 if(ENABLE_CLOSED_LOOP)
     add_definitions(-DENABLE_CLOSED_LOOP)
 endif()
